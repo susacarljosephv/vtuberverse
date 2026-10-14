@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>VTuberVerse</title>
+
+  <style>
+    /* ---------- 1. COLORS & BASICS ---------- */
+    :root {
+      --bg: #f3f0ff;       /* lavender mist */
+      --ink: #26204a;      /* deep indigo text */
+      --card: #ffffff;
+      --pink: #ff5c8a;     /* main accent */
+      --teal: #1f9e92;     /* secondary accent */
+      --muted: #6b6590;
+      --line: #dcd6f5;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.55;
+    }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 0 20px; }
+    h1, h2 { line-height: 1.15; }
+    h2 { font-size: 1.6rem; margin-bottom: 14px; }
+    section { padding: 36px 0; }
+    :focus-visible { outline: 3px solid var(--pink); outline-offset: 2px; }
+
+    /* ---------- 2. HEADER & HERO ---------- */
+    header { background: var(--ink); color: #fff; }
+    nav { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; }
+    .logo { font-weight: 800; font-size: 1.3rem; letter-spacing: .5px; }
+    .logo span { color: var(--pink); }
+    nav a { color: #cfc9f5; text-decoration: none; margin-left: 18px; }
+    nav a:hover { color: #fff; }
+
+    .hero { padding: 48px 0 56px; }
+    .hero h1 { font-size: clamp(2rem, 6vw, 3.4rem); max-width: 14ch; }
+    .hero p { margin-top: 14px; max-width: 46ch; color: #cfc9f5; }
+    .live-pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      margin-top: 22px; padding: 8px 14px;
+      background: #3a3366; border-radius: 999px; font-size: .95rem;
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--pink); animation: pulse 1.4s infinite; }
+    @keyframes pulse { 50% { opacity: .3; } }
+    @media (prefers-reduced-motion: reduce) { .dot { animation: none; } }
+
+    /* ---------- 3. DISCOVER (search + filter + cards) ---------- */
+    .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+    input, select {
+      font: inherit; padding: 10px 12px; border: 2px solid var(--line);
+      border-radius: 10px; background: #fff; color: var(--ink);
+    }
+    input { flex: 1 1 220px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+    .creator {
+      background: var(--card); border: 2px solid var(--line);
+      border-radius: 14px; padding: 16px;
+    }
+    .avatar {
+      width: 56px; height: 56px; border-radius: 50%;
+      display: grid; place-items: center; font-size: 1.6rem; margin-bottom: 10px;
+    }
+    .creator h3 { font-size: 1.1rem; }
+    .creator p { color: var(--muted); font-size: .92rem; margin: 4px 0 10px; }
+    .tag {
+      display: inline-block; font-size: .78rem; padding: 2px 9px; margin: 0 4px 4px 0;
+      border-radius: 999px; background: #ece8ff;
+    }
+    .tag.gem { background: #d7f5f1; color: #0d6b61; font-weight: 700; }
+    .empty { color: var(--muted); padding: 20px 0; }
+
+    /* ---------- 4. SCHEDULE ---------- */
+    .tzbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .tzbar label { font-weight: 700; }
+    .stream {
+      display: flex; justify-content: space-between; align-items: center; gap: 12px;
+      background: var(--card); border-left: 6px solid var(--pink);
+      border-radius: 10px; padding: 12px 16px; margin-bottom: 10px;
+    }
+    .stream .when { font-weight: 700; color: var(--teal); white-space: nowrap; text-align: right; }
+    .stream small { color: var(--muted); display: block; }
+
+    footer { padding: 28px 0 40px; text-align: center; color: var(--muted); font-size: .9rem; }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="wrap">
+      <nav>
+        <div class="logo">VTuber<span>Verse</span></div>
+        <div>
+          <a href="#discover">Discover</a>
+          <a href="#schedule">Schedule</a>
+        </div>
+      </nav>
+
+      <div class="hero">
+        <h1>Find who you'll love. Know when they're live.</h1>
+        <p>A fan-made hub for finding VTubers, tracking stream times in your own timezone, and meeting other fans.</p>
+        <div class="live-pill"><span class="dot"></span><span id="liveNow">Checking who's live...</span></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- DISCOVER -->
+    <section id="discover">
+      <h2>Discover creators</h2>
+      <div class="controls">
+        <input id="search" type="search" placeholder="Search by name or tag (try: cozy)" aria-label="Search creators" />
+        <select id="language" aria-label="Filter by language">
+          <option value="all">All languages</option>
+          <option>English</option>
+          <option>Japanese</option>
+          <option>Filipino</option>
+        </select>
+        <label style="display:flex;align-items:center;gap:6px;">
+          <input type="checkbox" id="gems" style="flex:none" /> Hidden gems only
+        </label>
+      </div>
+      <div class="grid" id="creatorGrid"></div>
+      <p class="empty" id="emptyMsg" hidden>No creators match. Try a different word or clear the filters.</p>
+    </section>
+
+    <!-- SCHEDULE -->
+    <section id="schedule">
+      <h2>Upcoming streams</h2>
+      <div class="tzbar">
+        <label for="tz">Show times in:</label>
+        <select id="tz"></select>
+      </div>
+      <div id="scheduleList"></div>
+    </section>
+  </main>
+
+  <footer>VTuberVerse demo. All creators shown here are made-up examples.</footer>
+
+  <script>
+    /* ---------- DATA ----------
+       Fake creators for the demo. In a real site this would come from a database.
+       followers is used for the "Hidden gems" filter. */
+    const creators = [
+      { name: "Mochi Starlight", emoji: "🌙", color: "#ffd9e6", language: "English",  tags: ["cozy", "singing"],        followers: 4200,   bio: "Late-night lullabies and ramen talk." },
+      { name: "Kiri Nova",       emoji: "⚡", color: "#d9f0ff", language: "Japanese", tags: ["gaming", "chaotic"],      followers: 310000, bio: "Fast reflexes, louder reactions." },
+      { name: "Bituin Dela Cruz",emoji: "⭐", color: "#fff1c2", language: "Filipino", tags: ["talk", "cozy", "music"],  followers: 8900,   bio: "Kwentuhan, kape, and acoustic covers." },
+      { name: "Ember Quill",     emoji: "🔥", color: "#ffe0cc", language: "English",  tags: ["art", "drawing"],         followers: 1500,   bio: "Draws viewers' ideas live." },
+      { name: "Sora Minato",     emoji: "🌊", color: "#d7f5f1", language: "Japanese", tags: ["singing", "cozy"],        followers: 56000,  bio: "Calm covers and rainy-day chats." },
+      { name: "Pixel Pomelo",    emoji: "🍊", color: "#e6dcff", language: "Filipino", tags: ["gaming", "indie games"],  followers: 2700,   bio: "Tries small indie games so you don't have to." }
+    ];
+
+    /* Stream times: hours from "now", so the demo always shows upcoming times.
+       (A real site would store exact dates in UTC.) */
+    const streamPlan = [
+      { who: "Pixel Pomelo",     title: "Indie game night",      inHours: -0.5, length: 2   }, // already live
+      { who: "Mochi Starlight",  title: "Lullaby karaoke",       inHours: 3,    length: 2   },
+      { who: "Bituin Dela Cruz", title: "Kape at Kwentuhan",     inHours: 7,    length: 1.5 },
+      { who: "Kiri Nova",        title: "Boss rush challenge",   inHours: 20,   length: 3   },
+      { who: "Ember Quill",      title: "Draw your ideas live",  inHours: 31,   length: 2   }
+    ];
+
+    // Turn the plan into real Date objects (rounded to the nearest 30 minutes)
+    const HALF_HOUR = 30 * 60 * 1000;
+    const base = Math.round(Date.now() / HALF_HOUR) * HALF_HOUR;
+    const streams = streamPlan.map(s => ({
+      ...s,
+      start: new Date(base + s.inHours * 3600000),
+      end:   new Date(base + (s.inHours + s.length) * 3600000)
+    }));
+
+    /* ---------- DISCOVER LOGIC ---------- */
+    const grid     = document.getElementById("creatorGrid");
+    const emptyMsg = document.getElementById("emptyMsg");
+    const search   = document.getElementById("search");
+    const language = document.getElementById("language");
+    const gems     = document.getElementById("gems");
+    const GEM_LIMIT = 10000; // under this many followers = "hidden gem"
+
+    function renderCreators() {
+      const q = search.value.trim().toLowerCase();
+
+      const results = creators.filter(c => {
+        const matchesText = c.name.toLowerCase().includes(q) ||
+                            c.tags.some(t => t.toLowerCase().includes(q));
+        const matchesLang = language.value === "all" || c.language === language.value;
+        const matchesGem  = !gems.checked || c.followers < GEM_LIMIT;
+        return matchesText && matchesLang && matchesGem;
+      });
+
+      grid.innerHTML = results.map(c => `
+        <article class="creator">
+          <div class="avatar" style="background:${c.color}">${c.emoji}</div>
+          <h3>${c.name}</h3>
+          <p>${c.bio}</p>
+          <span class="tag">${c.language}</span>
+          ${c.tags.map(t => `<span class="tag">${t}</span>`).join("")}
+          ${c.followers < GEM_LIMIT ? '<span class="tag gem">Hidden gem</span>' : ""}
+        </article>
+      `).join("");
+
+      emptyMsg.hidden = results.length > 0;
+    }
+
+    [search, language, gems].forEach(el => el.addEventListener("input", renderCreators));
+
+    /* ---------- SCHEDULE LOGIC ---------- */
+    const tzSelect = document.getElementById("tz");
+    const list     = document.getElementById("scheduleList");
+    const liveNow  = document.getElementById("liveNow");
+
+    const zones = [
+      "Asia/Manila", "Asia/Tokyo", "America/Los_Angeles",
+      "America/New_York", "Europe/London", "Australia/Sydney"
+    ];
+    // Put the viewer's own timezone first
+    const myZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (!zones.includes(myZone)) zones.unshift(myZone);
+
+    tzSelect.innerHTML = zones
+      .map(z => `<option value="${z}">${z.replace("_", " ")}</option>`)
+      .join("");
+    tzSelect.value = myZone;
+
+    function renderSchedule() {
+      const zone = tzSelect.value;
+      const fmt = new Intl.DateTimeFormat(undefined, {
+        weekday: "short", hour: "numeric", minute: "2-digit", timeZone: zone
+      });
+      const now = new Date();
+
+      list.innerHTML = streams.map(s => {
+        const isLive = s.start <= now && now < s.end;
+        return `
+          <div class="stream">
+            <div>
+              <strong>${s.who}</strong>
+              <small>${s.title}</small>
+            </div>
+            <div class="when">${isLive ? "Live now" : fmt.format(s.start)}</div>
+          </div>`;
+      }).join("");
+    }
+    tzSelect.addEventListener("change", renderSchedule);
+
+    // "Live now" pill in the hero
+    const live = streams.filter(s => s.start <= new Date() && new Date() < s.end);
+    liveNow.textContent = live.length
+      ? `${live[0].who} is live now: ${live[0].title}`
+      : "Nobody is live right now. Check the schedule below.";
+
+    /* ---------- START ---------- */
+    renderCreators();
+    renderSchedule();
+  </script>
+</body>
+</html>
