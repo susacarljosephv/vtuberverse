@@ -8,11 +8,11 @@
   <style>
     /* ---------- 1. COLORS & BASICS ---------- */
     :root {
-      --bg: #f3f0ff;       /* lavender mist */
-      --ink: #26204a;      /* deep indigo text */
+      --bg: #f3f0ff;
+      --ink: #26204a;
       --card: #ffffff;
-      --pink: #ff5c8a;     /* main accent */
-      --teal: #1f9e92;     /* secondary accent */
+      --pink: #ff5c8a;
+      --teal: #1f9e92;
       --muted: #6b6590;
       --line: #dcd6f5;
     }
@@ -49,21 +49,30 @@
     @keyframes pulse { 50% { opacity: .3; } }
     @media (prefers-reduced-motion: reduce) { .dot { animation: none; } }
 
-    /* ---------- 3. DISCOVER (search + filter + cards) ---------- */
+    /* ---------- 3. DISCOVER ---------- */
     .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
     input, select {
       font: inherit; padding: 10px 12px; border: 2px solid var(--line);
       border-radius: 10px; background: #fff; color: var(--ink);
     }
     input { flex: 1 1 220px; }
+    .count { color: var(--muted); margin-bottom: 12px; font-size: .95rem; }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
     .creator {
       background: var(--card); border: 2px solid var(--line);
       border-radius: 14px; padding: 16px;
     }
     .avatar {
-      width: 56px; height: 56px; border-radius: 50%;
-      display: grid; place-items: center; font-size: 1.6rem; margin-bottom: 10px;
+      position: relative; overflow: hidden;
+      width: 84px; height: 84px; border-radius: 50%;
+      display: grid; place-items: center; font-size: 1.3rem; font-weight: 800;
+      margin-bottom: 10px; color: var(--ink);
+    }
+    /* The model image sits on top of the initials. If the image file is missing,
+       it is removed and the initials show instead. */
+    .avatar img {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: cover; object-position: top center;
     }
     .creator h3 { font-size: 1.1rem; }
     .creator p { color: var(--muted); font-size: .92rem; margin: 4px 0 10px; }
@@ -71,10 +80,11 @@
       display: inline-block; font-size: .78rem; padding: 2px 9px; margin: 0 4px 4px 0;
       border-radius: 999px; background: #ece8ff;
     }
-    .tag.gem { background: #d7f5f1; color: #0d6b61; font-weight: 700; }
+    .tag.group { font-weight: 700; background: var(--ink); color: #fff; }
     .empty { color: var(--muted); padding: 20px 0; }
 
     /* ---------- 4. SCHEDULE ---------- */
+    .note { color: var(--muted); font-size: .92rem; margin-bottom: 12px; }
     .tzbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 14px; }
     .tzbar label { font-weight: 700; }
     .stream {
@@ -84,6 +94,21 @@
     }
     .stream .when { font-weight: 700; color: var(--teal); white-space: nowrap; text-align: right; }
     .stream small { color: var(--muted); display: block; }
+
+    /* ---------- 5. FUN FACTS ---------- */
+    .fact-card {
+      background: var(--ink); color: #fff; border-radius: 16px; padding: 24px;
+    }
+    .fact-card small { color: #cfc9f5; display: block; margin-bottom: 8px; }
+    .fact-card p { font-size: 1.2rem; max-width: 60ch; min-height: 4.5em; }
+    .fact-card button {
+      margin-top: 14px; font: inherit; font-weight: 700; cursor: pointer;
+      padding: 10px 18px; border: 0; border-radius: 10px;
+      background: var(--pink); color: #fff;
+    }
+    .fact-card button:hover { background: #e84a78; }
+    .fact-list { margin-top: 18px; padding-left: 20px; color: var(--muted); }
+    .fact-list li { margin-bottom: 8px; }
 
     footer { padding: 28px 0 40px; text-align: center; color: var(--muted); font-size: .9rem; }
   </style>
@@ -97,13 +122,14 @@
         <div>
           <a href="#discover">Discover</a>
           <a href="#schedule">Schedule</a>
+          <a href="#facts">Fun facts</a>
         </div>
       </nav>
 
       <div class="hero">
         <h1>Find who you'll love. Know when they're live.</h1>
         <p>A fan-made hub for finding VTubers, tracking stream times in your own timezone, and meeting other fans.</p>
-        <div class="live-pill"><span class="dot"></span><span id="liveNow">Checking who's live...</span></div>
+        <div class="live-pill"><span class="dot"></span><span id="liveNow">Checking the sample schedule...</span></div>
       </div>
     </div>
   </header>
@@ -113,58 +139,105 @@
     <section id="discover">
       <h2>Discover creators</h2>
       <div class="controls">
-        <input id="search" type="search" placeholder="Search by name or tag (try: cozy)" aria-label="Search creators" />
-        <select id="language" aria-label="Filter by language">
-          <option value="all">All languages</option>
-          <option>English</option>
-          <option>Japanese</option>
-          <option>Filipino</option>
+        <input id="search" type="search" placeholder="Search by name or tag (try: Neuro, owl, singing)" aria-label="Search creators" />
+        <select id="group" aria-label="Filter by group">
+          <option value="all">All groups</option>
+          <option>hololive</option>
+          <option>ChromaSHIFT</option>
+          <option>Indie</option>
+          <option>AI</option>
+          <option>Other</option>
         </select>
-        <label style="display:flex;align-items:center;gap:6px;">
-          <input type="checkbox" id="gems" style="flex:none" /> Hidden gems only
-        </label>
       </div>
+      <p class="count" id="count"></p>
       <div class="grid" id="creatorGrid"></div>
-      <p class="empty" id="emptyMsg" hidden>No creators match. Try a different word or clear the filters.</p>
+      <p class="empty" id="emptyMsg" hidden>No creators match. Try a different word or choose "All groups".</p>
     </section>
 
     <!-- SCHEDULE -->
     <section id="schedule">
       <h2>Upcoming streams</h2>
+      <p class="note">Sample schedule for the demo. These times are placeholders, not real stream times. Check each creator's official channel for live schedules.</p>
       <div class="tzbar">
         <label for="tz">Show times in:</label>
         <select id="tz"></select>
       </div>
       <div id="scheduleList"></div>
     </section>
+
+    <!-- FUN FACTS -->
+    <section id="facts">
+      <h2>Fun facts</h2>
+      <div class="fact-card">
+        <small id="factCount"></small>
+        <p id="factText"></p>
+        <button id="nextFact" type="button">Show another fact</button>
+      </div>
+      <ul class="fact-list" id="factList"></ul>
+    </section>
   </main>
 
-  <footer>VTuberVerse demo. All creators shown here are made-up examples.</footer>
+  <footer>
+    VTuberVerse is a fan-made demo and is not affiliated with hololive, ChromaSHIFT, or any creator listed.
+    Character art belongs to the creators and their agencies.
+  </footer>
 
   <script>
     /* ---------- DATA ----------
-       Fake creators for the demo. In a real site this would come from a database.
-       followers is used for the "Hidden gems" filter. */
+       group: hololive | ChromaSHIFT | Indie | AI | Other
+       tags and bio are optional. Edit this list to add or remove creators.
+       The ChromaSHIFT roster is the 14-member lineup announced in June 2025,
+       so double-check it against their official site before you publish. */
     const creators = [
-      { name: "Mochi Starlight", emoji: "🌙", color: "#ffd9e6", language: "English",  tags: ["cozy", "singing"],        followers: 4200,   bio: "Late-night lullabies and ramen talk." },
-      { name: "Kiri Nova",       emoji: "⚡", color: "#d9f0ff", language: "Japanese", tags: ["gaming", "chaotic"],      followers: 310000, bio: "Fast reflexes, louder reactions." },
-      { name: "Bituin Dela Cruz",emoji: "⭐", color: "#fff1c2", language: "Filipino", tags: ["talk", "cozy", "music"],  followers: 8900,   bio: "Kwentuhan, kape, and acoustic covers." },
-      { name: "Ember Quill",     emoji: "🔥", color: "#ffe0cc", language: "English",  tags: ["art", "drawing"],         followers: 1500,   bio: "Draws viewers' ideas live." },
-      { name: "Sora Minato",     emoji: "🌊", color: "#d7f5f1", language: "Japanese", tags: ["singing", "cozy"],        followers: 56000,  bio: "Calm covers and rainy-day chats." },
-      { name: "Pixel Pomelo",    emoji: "🍊", color: "#e6dcff", language: "Filipino", tags: ["gaming", "indie games"],  followers: 2700,   bio: "Tries small indie games so you don't have to." }
+      // --- Your picks ---
+      { name: "Rin Penrose",      group: "Other", language: "English",  tags: [], bio: "Started with idol Corp's English E-Sekai wave." },
+      { name: "Hoshimachi Suisei", group: "hololive", language: "Japanese", tags: ["singing"], bio: "hololive talent known for her music." },
+      { name: "Nanashi Mumei",    group: "hololive", language: "English",  tags: ["owl"], bio: "hololive English talent." },
+      { name: "Takanashi Kiara",  group: "hololive", language: "English",  tags: ["phoenix"], bio: "hololive English talent." },
+      { name: "Pan",              group: "Other", tags: [], bio: "Profile coming soon." },
+      { name: "Pam",              group: "Other", tags: [], bio: "Profile coming soon." },
+      { name: "Juna Unagi",       group: "Other", language: "English",  tags: ["horror games", "reflex games"], bio: "Energetic and competitive. Began in idol Corp's E-Sekai wave." },
+      { name: "Nimi Nightmare",   group: "Indie", language: "English",  tags: ["gaming"], bio: "Independent English VTuber." },
+      { name: "Sameko Saba",      group: "Indie", language: "English",  tags: ["fish girl", "lighthouse"], bio: "Indie fish girl who lives in a lighthouse. Debuted June 2025." },
+      { name: "Kitsune Ai",       group: "Other", tags: [], bio: "Profile coming soon." },
+      { name: "Neuro-sama",       group: "AI", language: "English",  tags: ["AI", "gaming", "singing"], bio: "An AI-powered streamer, created by Vedal." },
+
+      // --- More hololive members ---
+      { name: "Usada Pekora",     group: "hololive", language: "Japanese", tags: ["comedy"], bio: "Mischievous and very fun to watch." },
+      { name: "Houshou Marine",   group: "hololive", language: "Japanese", tags: ["pirate"], bio: "hololive's pirate captain." },
+
+      // --- ChromaSHIFT members ---
+      { name: "Mia Melonya",      group: "ChromaSHIFT", tags: [], bio: "ChromaSHIFT talent." },
+      { name: "Poko Rakun",       group: "ChromaSHIFT", tags: [], bio: "ChromaSHIFT talent." },
+      { name: "Roca Rourin",      group: "ChromaSHIFT", tags: [], bio: "ChromaSHIFT talent." },
+      { name: "Ruby Runeheart",   group: "ChromaSHIFT", tags: [], bio: "ChromaSHIFT talent." },
+      { name: "Lalabell Lullaby", group: "ChromaSHIFT", tags: [], bio: "ChromaSHIFT talent." },
+      { name: "Koa Akugaki",      group: "ChromaSHIFT", tags: [], bio: "ChromaSHIFT talent." },
+      { name: "Taiga Toragami",   group: "ChromaSHIFT", tags: [], bio: "ChromaSHIFT talent." },
+      { name: "Shabel Tonya",     group: "ChromaSHIFT", tags: [], bio: "ChromaSHIFT talent." },
+      { name: "Enya Ignis",       group: "ChromaSHIFT", tags: [], bio: "ChromaSHIFT talent." },
+      { name: "Chikafuji Lisa",   group: "ChromaSHIFT", tags: [], bio: "ChromaSHIFT talent." },
+      { name: "Daisy Dandelion",  group: "ChromaSHIFT", tags: [], bio: "ChromaSHIFT talent." },
+      { name: "Cersea Soulstorm", group: "ChromaSHIFT", tags: [], bio: "ChromaSHIFT talent." },
+      { name: "Riki Poppet",      group: "ChromaSHIFT", tags: [], bio: "ChromaSHIFT talent." },
+      { name: "Yena Youngblood",  group: "ChromaSHIFT", tags: [], bio: "ChromaSHIFT talent." }
     ];
 
-    /* Stream times: hours from "now", so the demo always shows upcoming times.
-       (A real site would store exact dates in UTC.) */
+    // Avatar circle color for each group
+    const groupColors = {
+      hololive: "#d9f0ff", ChromaSHIFT: "#ffd9e6", Indie: "#d7f5f1", AI: "#e6dcff", Other: "#ece8ff"
+    };
+
+    /* Sample stream times (hours from "now") so the demo always has upcoming times.
+       These are NOT real schedules. A real site would load them from an API. */
     const streamPlan = [
-      { who: "Pixel Pomelo",     title: "Indie game night",      inHours: -0.5, length: 2   }, // already live
-      { who: "Mochi Starlight",  title: "Lullaby karaoke",       inHours: 3,    length: 2   },
-      { who: "Bituin Dela Cruz", title: "Kape at Kwentuhan",     inHours: 7,    length: 1.5 },
-      { who: "Kiri Nova",        title: "Boss rush challenge",   inHours: 20,   length: 3   },
-      { who: "Ember Quill",      title: "Draw your ideas live",  inHours: 31,   length: 2   }
+      { who: "Neuro-sama",       title: "Sample: game stream",     inHours: -0.5, length: 2   },
+      { who: "Hoshimachi Suisei", title: "Sample: singing stream", inHours: 3,    length: 2   },
+      { who: "Nimi Nightmare",   title: "Sample: game stream",     inHours: 7,    length: 1.5 },
+      { who: "Mia Melonya",      title: "Sample: chat stream",     inHours: 20,   length: 3   },
+      { who: "Juna Unagi",       title: "Sample: horror night",    inHours: 31,   length: 2   }
     ];
 
-    // Turn the plan into real Date objects (rounded to the nearest 30 minutes)
     const HALF_HOUR = 30 * 60 * 1000;
     const base = Math.round(Date.now() / HALF_HOUR) * HALF_HOUR;
     const streams = streamPlan.map(s => ({
@@ -176,37 +249,55 @@
     /* ---------- DISCOVER LOGIC ---------- */
     const grid     = document.getElementById("creatorGrid");
     const emptyMsg = document.getElementById("emptyMsg");
+    const countEl  = document.getElementById("count");
     const search   = document.getElementById("search");
-    const language = document.getElementById("language");
-    const gems     = document.getElementById("gems");
-    const GEM_LIMIT = 10000; // under this many followers = "hidden gem"
+    const group    = document.getElementById("group");
+
+    // "Hoshimachi Suisei" -> "HS"
+    function initials(name) {
+      return name.replace(/-/g, " ").split(" ").filter(Boolean).slice(0, 2)
+                 .map(w => w[0].toUpperCase()).join("");
+    }
+
+    // "Hoshimachi Suisei" -> "images/hoshimachi-suisei.png"
+    // Put each model image in an "images" folder using this name.
+    // Set c.image on a creator to use a different file name.
+    function imagePath(c) {
+      if (c.image) return c.image;
+      const slug = c.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      return "images/" + slug + ".png";
+    }
 
     function renderCreators() {
       const q = search.value.trim().toLowerCase();
 
       const results = creators.filter(c => {
         const matchesText = c.name.toLowerCase().includes(q) ||
+                            c.group.toLowerCase().includes(q) ||
                             c.tags.some(t => t.toLowerCase().includes(q));
-        const matchesLang = language.value === "all" || c.language === language.value;
-        const matchesGem  = !gems.checked || c.followers < GEM_LIMIT;
-        return matchesText && matchesLang && matchesGem;
+        const matchesGroup = group.value === "all" || c.group === group.value;
+        return matchesText && matchesGroup;
       });
 
       grid.innerHTML = results.map(c => `
         <article class="creator">
-          <div class="avatar" style="background:${c.color}">${c.emoji}</div>
+          <div class="avatar" style="background:${groupColors[c.group]}">
+            ${initials(c.name)}
+            <img src="${imagePath(c)}" alt="${c.name} model" loading="lazy" onerror="this.remove()" />
+          </div>
           <h3>${c.name}</h3>
-          <p>${c.bio}</p>
-          <span class="tag">${c.language}</span>
+          <p>${c.bio || ""}</p>
+          <span class="tag group">${c.group}</span>
+          ${c.language ? `<span class="tag">${c.language}</span>` : ""}
           ${c.tags.map(t => `<span class="tag">${t}</span>`).join("")}
-          ${c.followers < GEM_LIMIT ? '<span class="tag gem">Hidden gem</span>' : ""}
         </article>
       `).join("");
 
+      countEl.textContent = `Showing ${results.length} of ${creators.length} creators`;
       emptyMsg.hidden = results.length > 0;
     }
 
-    [search, language, gems].forEach(el => el.addEventListener("input", renderCreators));
+    [search, group].forEach(el => el.addEventListener("input", renderCreators));
 
     /* ---------- SCHEDULE LOGIC ---------- */
     const tzSelect = document.getElementById("tz");
@@ -217,7 +308,6 @@
       "Asia/Manila", "Asia/Tokyo", "America/Los_Angeles",
       "America/New_York", "Europe/London", "Australia/Sydney"
     ];
-    // Put the viewer's own timezone first
     const myZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     if (!zones.includes(myZone)) zones.unshift(myZone);
 
@@ -241,17 +331,49 @@
               <strong>${s.who}</strong>
               <small>${s.title}</small>
             </div>
-            <div class="when">${isLive ? "Live now" : fmt.format(s.start)}</div>
+            <div class="when">${isLive ? "Live now (sample)" : fmt.format(s.start)}</div>
           </div>`;
       }).join("");
     }
     tzSelect.addEventListener("change", renderSchedule);
 
-    // "Live now" pill in the hero
+    // Hero pill (also sample data)
     const live = streams.filter(s => s.start <= new Date() && new Date() < s.end);
     liveNow.textContent = live.length
-      ? `${live[0].who} is live now: ${live[0].title}`
-      : "Nobody is live right now. Check the schedule below.";
+      ? `Demo: ${live[0].who} shows as live in the sample schedule`
+      : "Demo: nobody is live in the sample schedule right now";
+
+    /* ---------- FUN FACTS ---------- */
+    const facts = [
+      "The word \"VTuber\" was popularized by Kizuna AI, who posted her first video on November 29, 2016.",
+      "Kizuna AI's main channel passed 1 million subscribers in about a year, which helped start the modern VTuber boom.",
+      "Kizuna AI wasn't the first virtual vlogger. Ami Yamato posted CG avatar videos on YouTube as early as 2011.",
+      "Many VTubers use just a webcam or a phone camera for face tracking to move their model in real time.",
+      "2D VTuber models are usually made with Live2D, which animates layered illustrations. 3D models can use full-body motion tracking.",
+      "Hololive and Nijisanji turned VTubing into a major industry, with big concerts, merch, and fans around the world.",
+      "When a VTuber leaves an agency or retires their character, it's called a \"graduation\", and it's a big event for fans.",
+      "Sameko Saba debuted in June 2025 and was reported to reach 1 million YouTube subscribers in under three days.",
+      "ChromaSHIFT started as idol Corp in 2022 and rebranded to ChromaSHIFT in June 2025.",
+      "Neuro-sama is an AI-powered streamer created by Vedal, and she plays games and sings on stream."
+    ];
+
+    const factText  = document.getElementById("factText");
+    const factCount = document.getElementById("factCount");
+    const factList  = document.getElementById("factList");
+    let factIndex = Math.floor(Math.random() * facts.length);
+
+    function showFact() {
+      factText.textContent = facts[factIndex];
+      factCount.textContent = `Fact ${factIndex + 1} of ${facts.length}`;
+    }
+    document.getElementById("nextFact").addEventListener("click", () => {
+      factIndex = (factIndex + 1) % facts.length;
+      showFact();
+    });
+
+    // Full list under the card, so every fact is visible without clicking
+    factList.innerHTML = facts.map(f => `<li>${f}</li>`).join("");
+    showFact();
 
     /* ---------- START ---------- */
     renderCreators();
